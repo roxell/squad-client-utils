@@ -17,6 +17,7 @@ def main(args):
     group_slug = args.get('group', None)
     suite_slug = args.get('suite', None)
     SquadApi.configure(args.get('squadapi_url', None))
+    number_of_builds = args.get('number', None)
     squad = Squad()
     getid = lambda s: int(re.search('\d+', s).group())
 
@@ -51,11 +52,11 @@ def main(args):
     table = {}
 
     for project in projects:
-        print('- %s: fetching 10 builds' % project.slug, flush=True)
+        print('- %s: fetching %s builds' % (project.slug, number_of_builds), flush=True)
 
         environments = project.environments(count=ALL)
 
-        for build in project.builds(count=10, ordering='-id').values():
+        for build in project.builds(count=int(number_of_builds), ordering='-id').values():
             print('  - %s: fetching tests' % build.version, flush=True)
             results = {'summary': defaultdict(dict)}
 
@@ -90,6 +91,8 @@ if __name__ == '__main__':
                         help="Suite name e.g., kunit")
     parser.add_argument("--squadapi_url", default='https://qa-reports.linaro.org',
                         help="url to SQUAD server")
+    parser.add_argument("--number", default='10',
+                        help="number of builds, default 10")
     args = vars(parser.parse_args())
     if args:
         main(args)
