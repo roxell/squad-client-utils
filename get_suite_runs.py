@@ -2,7 +2,7 @@
 
 """
 
-Get a list of kunit runs across projects
+Get a list of suites runs across projects
 
 """
 
@@ -21,11 +21,8 @@ def main(args):
     squad = Squad()
     getid = lambda s: int(re.search('\d+', s).group())
 
-    # kunit should be in the latest kernel releases
-    # next, mainline
-
     # First we need to know which projects from the selected group
-    # contain kunit suite
+    # contain the specified suite.
     print('Fetching projects that contain "%s" suites for "%s" group' % (suite_slug, group_slug), flush=True)
     suites = squad.suites(slug=suite_slug, project__group__slug=group_slug)
     projects_ids = list(set([str(getid(suite.project)) for suite in suites.values()]))
