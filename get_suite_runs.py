@@ -48,6 +48,11 @@ def main(args):
     # }
     table = {}
 
+    if number_of_builds == "0":
+        for project in projects:
+            print('- %s' % project.slug, flush=True)
+        return
+
     for project in projects:
         print('- %s: fetching %s builds' % (project.slug, number_of_builds), flush=True)
 
@@ -88,8 +93,8 @@ if __name__ == '__main__':
                         help="Suite name e.g., kunit")
     parser.add_argument("--squadapi_url", default='https://qa-reports.linaro.org',
                         help="url to SQUAD server")
-    parser.add_argument("--number", default='10',
-                        help="number of builds, default 10")
+    parser.add_argument("--number", default='0',
+                        help="number of builds, default 0")
     args = vars(parser.parse_args())
     if args:
         main(args)
