@@ -12,7 +12,7 @@ from squad_client.core.api import SquadApi
 from squad_client.utils import getid, parse_test_name
 
 
-do_color = True
+do_color = False
 
 
 def _color(string, color):
@@ -48,12 +48,15 @@ def stableness(results, target="pass", pad=10):
 
     pass_count = results.count(target)
     n = pass_count / len(results)
-    if n == 1:
-        out = 'YES'
-        color = green
-    else:
-        out = str(round(n * 100)) + '%'
-        color = yellow if n > 0.8 else red
+    out = str(round(n * 100)) + '%'
+
+    color = str
+    if do_color:
+        if n == 1:
+            out = 'YES'
+            color = green
+        else:
+            color = yellow if n > 0.8 else red
 
     return n, color(out.center(pad))
 
@@ -142,6 +145,10 @@ def find_stable_tests(tests, envs={}, suites={}):
 
 def main(args):
 
+    global do_color
+
+    do_color = args.color
+
     SquadApi.configure(args.squadapi_url)
     squad = Squad()
     print(f'I: Fetching group {args.group}')
@@ -221,6 +228,8 @@ if __name__ == '__main__':
                         help="Test names to filter e.g. my-test-1 my-test-2 Show data for specific tests only")
     parser.add_argument("--squadapi_url", default='https://qa-reports.linaro.org',
                         help="url to SQUAD server")
+    parser.add_argument("--color", action="store_true", default=False,
+                        help="Color output with green (100%), yellow (> 80%) or red")
 
     args = parser.parse_args()
     main(args)
