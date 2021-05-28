@@ -53,7 +53,6 @@ def stableness(results, target="pass", pad=10):
     color = str
     if do_color:
         if n == 1:
-            out = 'YES'
             color = green
         else:
             color = yellow if n > 0.8 else red
