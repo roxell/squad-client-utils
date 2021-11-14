@@ -101,6 +101,29 @@ optional arguments:
   --test TEST           squad test
 ```
 
+### `squad-list-metrics`: Get all of the metrics for a build
+
+```
+❯ pipenv run ./squad-list-metrics --help
+usage: squad-list-metrics [-h] --group GROUP --project PROJECT --build BUILD
+
+List all of the metrics for a squad build
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --group GROUP      squad group
+  --project PROJECT  squad project
+  --build BUILD      squad build
+```
+
+#### Given a collection of metrics, get a subset that contain build warnings
+
+```
+❯ pipenv run ./squad-list-metrics --group=lkft --project=linux-next-master-sanity --build=next-20211118 > results.json
+
+❯ jq '.[] | select(.result>0.0)' results.json | jq --slurp
+```
+
 ## Contributing
 
 This (alpha) project is managed on [`github`](https://github.com) at https://github.com/Linaro/squad-client-utils
