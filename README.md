@@ -113,4 +113,4 @@ For major changes, please open an issue first to discuss what you would like to 
 
 ## License
 
-[MIT](https://gitlab.com/Linaro/lkft/reports/squad-tasks/-/blob/main/LICENSE)
+[MIT](https://github.com/Linaro/squad-client-utils/blob/master/LICENSE)
