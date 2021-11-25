@@ -21,19 +21,19 @@ optional arguments:
                         squad build to compare to
 ```
 
-#### Comparing a build to itself should return zero changes.
+#### Comparing a build to itself should return zero changes
 
 ```
 ❯ pipenv run ./squad-list-changes --group=lkft --project=linux-next-master-sanity --build=next-20211020 --base-build=next-20211020
 []
 ```
 
-#### Given a collection of changes, get a subset that contains only the regressions
+#### Given a collection of changes, get a subset that contains only regressions
 
 ```
 ❯ pipenv run ./squad-list-changes --group=lkft --project=linux-next-master-sanity --build=next-20211020 --base-build=next-20211019 > changes.json
 
-❯ jq '.[] | select(.change=="regression")' changes.json
+❯ jq '.[] | select(.change=="regression")' changes.json | jq --slurp
 ```
 
 ### `squad-list-results`: Get all of the results for a build

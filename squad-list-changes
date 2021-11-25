@@ -65,7 +65,7 @@ def run():
         logger.error(f"Get base build failed. Build not found: '{args.base_build}'.")
         return -1
 
-    changes = project.compare_builds(base_build.id, build.id, True)
+    changes = project.compare_builds(base_build.id, build.id, force=True)
     regressions = changes["regressions"]
     if not regressions:
         logger.debug("No regressions found.")
