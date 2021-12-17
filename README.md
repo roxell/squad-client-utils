@@ -101,6 +101,67 @@ optional arguments:
   --test TEST           squad test
 ```
 
+### `squad-list-test`: Get all of the data for a test
+
+```
+❯ pipenv run ./squad-list-test --help
+usage: squad-list-test [-h] --group GROUP --project PROJECT --build BUILD --environment ENVIRONMENT --suite SUITE --test TEST
+
+List data about a test
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --group GROUP         squad group
+  --project PROJECT     squad project
+  --build BUILD         squad build
+  --environment ENVIRONMENT
+                        squad environment
+  --suite SUITE         squad suite
+  --test TEST           squad test
+```
+
+Given a test, get all of the data about it
+
+```
+pipenv run ./squad-list-test --group=lkft --project=linux-next-master --build=next-20211206 --environment=x86_64 --suite=build --test=gcc-10-allnoconfig
+```
+
+Example output
+```
+{
+  "url": "https://qa-reports.linaro.org/api/tests/2142352489/",
+  "id": 2142352489,
+  "name": "build/gcc-10-allnoconfig",
+  "short_name": "gcc-10-allnoconfig",
+  "status": "pass",
+  "result": true,
+  "log": null,
+  "has_known_issues": false,
+  "suite": "build",
+  "known_issues": [],
+  "build": "next-20211206",
+  "environment": "x86_64",
+  "group": "lkft",
+  "project": "linux-next-master",
+  "metadata": {
+    "download_url": "https://builds.tuxbuild.com/21uE4xyDMQuUlvCJbZWkSZKVPEL/",
+    "git_describe": "next-20211206",
+    "git_ref": null,
+    "git_repo": "https://gitlab.com/Linaro/lkft/mirrors/next/linux-next",
+    "git_sha": "5d02ef4b57f6e7d4dcba14d40cf05373a146a605",
+    "git_short_log": "5d02ef4b57f6 (\"Add linux-next specific files for 20211206\")",
+    "kconfig": [
+      "allnoconfig"
+    ],
+    "kernel_version": "5.16.0-rc4",
+    "git_commit": "5d02ef4b57f6e7d4dcba14d40cf05373a146a605",
+    "git_branch": "master",
+    "make_kernelversion": "5.16.0-rc4",
+    "config": "https://builds.tuxbuild.com/21uE4xyDMQuUlvCJbZWkSZKVPEL/config"
+  }
+}
+```
+
 ### `squad-list-metrics`: Get all of the metrics for a build
 
 ```
