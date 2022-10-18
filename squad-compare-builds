@@ -121,11 +121,11 @@ def run():
 
     environment = None
     if args.environment:
-        environment = project.environment(args.environment)
+        environment = base_project.environment(args.environment)
 
     suite = None
     if args.suite:
-        suite = project.suite(args.suite)
+        suite = base_project.suite(args.suite)
 
     logger.debug(f'base: {base_group}/{base_project}/{base_build}')
     logger.debug(f'other: {other_group}/{other_project}/{other_build}')
