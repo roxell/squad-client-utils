@@ -125,7 +125,9 @@ def run():
 
     suites = None
     if args.suites:
-        suites = [base_project.suite(s) for s in args.suites.split(",")]
+        suites = []
+        for s in args.suites.split(","):
+            suites += base_project.suites(slug__startswith=s).values()
 
     logger.debug(f'base: {base_group}/{base_project}/{base_build}')
     logger.debug(f'other: {other_group}/{other_project}/{other_build}')
