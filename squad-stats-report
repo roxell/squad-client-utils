@@ -98,13 +98,13 @@ def parse_args():
     parser.add_argument(
             "--from-datetime",
             required=True,
-            help="Starting date time. Example: 2022-01-01T00:00:00",
+            help="Starting date time. Example: 2022-01-01 or 2022-01-01T00:00:00",
             )
 
     parser.add_argument(
             "--to-datetime",
             required=True,
-            help="Ending date time. Example: 2022-01-01T00:00:00",
+            help="Ending date time. Example: 2022-12-31 or 2022-12-31T00:00:00",
             )
 
     parser.add_argument(
@@ -168,13 +168,22 @@ def run():
         logger.setLevel(level=logging.DEBUG)
 
     from_datetime = args.from_datetime
+    if "T" not in from_datetime:
+        from_datetime = f"{from_datetime}T00:00:00"
+
     to_datetime = args.to_datetime
+    if "T" not in to_datetime:
+        to_datetime = f"{to_datetime}T23:59:59"
 
     group = Squad().group(args.group)
     project = group.project(args.project)
     environments = project.environments(count=ALL).values()
 
     filename = args.filename or f'stats-{args.group}-{args.project}-{re.sub(r":", "_", re.sub(r"-", "",from_datetime))}-{re.sub(r":", "_", re.sub(r"-", "",to_datetime))}.txt'
+
+    if os.path.isfile(filename):
+        print(f"Report is already generated: {filename}")
+        sys.exit(0)
 
     builds = project.builds(created_at__lt=to_datetime, created_at__gt=from_datetime, count=ALL).values()
     number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
