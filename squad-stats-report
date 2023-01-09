@@ -145,13 +145,13 @@ def get_number_of_kernel_builts(project, builds):
 
 
 def get_devices(environments, archs):
-    devices = set(environments)
+    devs = set(environments)
 
-    logger.debug(f"All environments {devices}")
+    logger.debug(f"All environments {devs}")
     actual_devices = set()
-    for device in devices:
+    for dev in devs:
         for known_device in KNOWN_DEVICES:
-            if known_device in device:
+            if known_device in dev:
                 actual_devices.add(known_device)
 
     return actual_devices
@@ -204,8 +204,8 @@ def run():
     kernel_pushes = []
     kernel_builts = []
     num_tests = []
-    architectures = []
-    devices = []
+    architectures = set()
+    devices = set()
     filename = args.filename or f'{json_dir}/stats-{args.group}-{args.project}.json'
             #if os.path.isfile(filename):
     if os.path.isfile(filename):
@@ -241,8 +241,8 @@ def run():
                     kernel_pushes.append(entry['kernel pushes'])
                     kernel_builts.append(entry['kernel builts'])
                     num_tests.append(entry['tests'])
-                    architectures = entry['architectures']
-                    devices = entry['devices']
+                    architectures.update(set(entry['architectures']))
+                    devices.update(set(entry['devices']))
                     ask_squad = False
                     logger.debug(f"Found dates, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
                     break
@@ -251,11 +251,8 @@ def run():
                 logger.debug(f"Fetching builds, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
                 builds = project.builds(created_at__lt=f"{tmp_to_date}{to_time}", created_at__gt=f"{tmp_from_date}{from_time}", count=ALL).values()
                 number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
-                devices = get_devices([e.slug for e in environments], archs)
+                devs = get_devices([e.slug for e in environments], archs)
                 total_tests = get_total_number_of_tests(builds)
-
-                archs_str = "\n           ".join(sorted(archs))
-                devices_str = "\n           ".join(sorted(devices))
 
                 d = defaultdict(dict)
                 d['from_datetime'] = f"{tmp_from_date}{from_time}"
@@ -264,14 +261,14 @@ def run():
                 d['kernel builts'] = number_of_kernel_builts
                 d['tests'] = total_tests
                 d['architectures'] = list(sorted(archs))
-                d['devices'] = list(sorted(devices))
+                d['devices'] = list(sorted(devs))
                 a.append(d)
 
                 kernel_pushes.append(len(builds))
                 kernel_builts.append(number_of_kernel_builts)
                 num_tests.append(total_tests)
-                architectures = list(sorted(archs))
-                devices = list(sorted(devices))
+                architectures.update(sorted(archs))
+                devices.update(sorted(devs))
 
             if year == to_year and month == to_month:
                 break
