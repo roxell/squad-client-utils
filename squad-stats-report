@@ -15,6 +15,9 @@ import os
 import re
 import sys
 import subprocess as sp
+from calendar import monthrange
+from collections import defaultdict
+from datetime import datetime, timedelta, date
 from multiprocessing import Pool
 from squad_client.core.api import SquadApi
 from squad_client.core.models import Squad, ALL, Test
@@ -127,7 +130,7 @@ def get_number_of_kernel_builts(project, builds):
     archs = set()
     total = 0
     for build in builds:
-        logger.debug(f"Fetching build test from {build.version}", flush=True)
+        logger.debug(f"Fetching build test from {build.version}")
         tests = build.tests(suite=suite.id, fields="id,environment").values()
         total += len(tests)
 
@@ -179,35 +182,129 @@ def run():
     project = group.project(args.project)
     environments = project.environments(count=ALL).values()
 
-    filename = args.filename or f'stats-{args.group}-{args.project}-{re.sub(r":", "_", re.sub(r"-", "",from_datetime))}-{re.sub(r":", "_", re.sub(r"-", "",to_datetime))}.txt'
 
+    json_dir = 'stored_jsons'
+    if not os.path.exists(json_dir):
+        os.makedirs(json_dir)
+        print(f"Created dir: {json_dir}")
+
+    from_date = from_datetime.split('T')[0]
+    to_date = to_datetime.split('T')[0]
+
+    from_year = int(from_date.split("-")[0])
+    from_month = int(from_date.split("-")[1])
+    from_day = int(from_date.split("-")[2])
+    to_year = int(to_date.split("-")[0])
+    to_month = int(to_date.split("-")[1])
+    to_day = int(to_date.split("-")[2])
+
+    reset_to_januari = True
+    first_from_day = True
+    a = []
+    kernel_pushes = []
+    kernel_builts = []
+    num_tests = []
+    architectures = []
+    devices = []
+    filename = args.filename or f'{json_dir}/stats-{args.group}-{args.project}.json'
+            #if os.path.isfile(filename):
     if os.path.isfile(filename):
-        print(f"Report is already generated: {filename}")
-        sys.exit(0)
+        with open(filename, "r") as infile:
+            a = json.load(infile)
 
-    builds = project.builds(created_at__lt=to_datetime, created_at__gt=from_datetime, count=ALL).values()
-    number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
-    devices = get_devices([e.slug for e in environments], archs)
-    total_tests = get_total_number_of_tests(builds)
+    for year in range(from_year, to_year + 1):
+        if year != from_year and reset_to_januari:
+            from_month = 1
+            reset_to_januari = False
 
-    archs_str = "\n           ".join(sorted(archs))
+        for month in range(from_month, 13):
+            if first_from_day:
+                first_from_day = False
+                from_time = f"T{from_datetime.split('T')[1]}"
+            else:
+                from_day = 1
+                from_time = f"T00:00:00"
+            tmp_from_date = date(year, month, from_day)
+            tmp_to_date = date(year, month, monthrange(year, month)[1])
+            if year == to_year and month == to_month:
+                tmp_to_date = date(year, month, to_day)
+                to_time = f"T{to_datetime.split('T')[1]}"
+            else:
+                to_time = f"T23:59:59"
+
+
+            # if data already exists
+            ask_squad = True
+            for entry in a:
+                if (entry['from_datetime'] == f"{tmp_from_date}{from_time}"
+                        and entry['to_datetime'] == f"{tmp_to_date}{to_time}"):
+                    kernel_pushes.append(entry['kernel pushes'])
+                    kernel_builts.append(entry['kernel builts'])
+                    num_tests.append(entry['tests'])
+                    architectures = entry['architectures']
+                    devices = entry['devices']
+                    ask_squad = False
+                    logger.debug(f"Found dates, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
+                    break
+
+            if ask_squad:
+                logger.debug(f"Fetching builds, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
+                builds = project.builds(created_at__lt=f"{tmp_to_date}{to_time}", created_at__gt=f"{tmp_from_date}{from_time}", count=ALL).values()
+                number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
+                devices = get_devices([e.slug for e in environments], archs)
+                total_tests = get_total_number_of_tests(builds)
+
+                archs_str = "\n           ".join(sorted(archs))
+                devices_str = "\n           ".join(sorted(devices))
+
+                d = defaultdict(dict)
+                d['from_datetime'] = f"{tmp_from_date}{from_time}"
+                d['to_datetime'] = f"{tmp_to_date}{to_time}"
+                d['kernel pushes'] = len(builds)
+                d['kernel builts'] = number_of_kernel_builts
+                d['tests'] = total_tests
+                d['architectures'] = list(sorted(archs))
+                d['devices'] = list(sorted(devices))
+                a.append(d)
+
+                kernel_pushes.append(len(builds))
+                kernel_builts.append(number_of_kernel_builts)
+                num_tests.append(total_tests)
+                architectures = list(sorted(archs))
+                devices = list(sorted(devices))
+
+            if year == to_year and month == to_month:
+                break
+
+
+    total_kernel_pushes = 0
+    for build in kernel_pushes:
+        total_kernel_pushes += build
+    total_kernel_builts = 0
+    for kernel in kernel_builts:
+        total_kernel_builts += kernel
+    total_tests = 0
+    for tests in num_tests:
+        total_tests += tests
+    archs_str = "\n           ".join(sorted(architectures))
     devices_str = "\n           ".join(sorted(devices))
     report = f"""
         project:       {project.slug}
         from:          {from_datetime}
         to:            {to_datetime}
-        kernel pushes: {len(builds)}
-        kernel builts: {number_of_kernel_builts}
+        kernel pushes: {total_kernel_pushes}
+        kernel builts: {total_kernel_builts}
         total tests:   {total_tests}
         architectures:
            {archs_str}
         devices:
            {devices_str}"""
     print(report)
+    with open(filename, "w") as outfile:
+        outfile.write(json.dumps(a, indent=4))
+    #print(json.dumps(a, indent=4))
+    sys.exit(1)
 
-    with open(filename, 'w') as fp:
-        fp.write(report)
-    print(f"file created: {filename}")
 
 if __name__ == "__main__":
     sys.exit(run())
