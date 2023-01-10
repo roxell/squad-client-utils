@@ -318,6 +318,7 @@ def run():
     tmp_from_date = date(from_year, from_month, from_day)
     end_date = date(to_year, to_month, to_day)
     delta = timedelta(days=1)
+    tmp_from_date -= delta
     while (tmp_from_date < end_date):
         tmp_to_date = tmp_from_date + delta
         tmp_from_date += delta
