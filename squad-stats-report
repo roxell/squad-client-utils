@@ -303,7 +303,6 @@ def run():
     to_month = int(to_date.split("-")[1])
     to_day = int(to_date.split("-")[2])
 
-    reset_to_januari = True
     first_from_day = True
     a = []
     kernel_pushes = []
@@ -312,86 +311,79 @@ def run():
     architectures = defaultdict(int)
     devices = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     filename = args.filename or f'{json_dir}/stats-{args.group}-{args.project}.json'
-            #if os.path.isfile(filename):
     if os.path.isfile(filename):
         with open(filename, "r") as infile:
             a = json.load(infile)
 
-    for year in range(from_year, to_year + 1):
-        if year != from_year and reset_to_januari:
-            from_month = 1
-            reset_to_januari = False
-
-        for month in range(from_month, 13):
-            if first_from_day:
-                first_from_day = False
-                from_time = f"T{from_datetime.split('T')[1]}"
-            else:
-                from_day = 1
-                from_time = f"T00:00:00"
-            tmp_from_date = date(year, month, from_day)
-            tmp_to_date = date(year, month, monthrange(year, month)[1])
-            if year == to_year and month == to_month:
-                tmp_to_date = date(year, month, to_day)
-                to_time = f"T{to_datetime.split('T')[1]}"
-            else:
-                to_time = f"T23:59:59"
+    tmp_from_date = date(from_year, from_month, from_day)
+    end_date = date(to_year, to_month, to_day)
+    delta = timedelta(days=1)
+    while (tmp_from_date < end_date):
+        tmp_to_date = tmp_from_date + delta
+        tmp_from_date += delta
+        if first_from_day:
+            first_from_day = False
+            from_time = f"T{from_datetime.split('T')[1]}"
+        else:
+            from_time = f"T00:00:00"
+        if tmp_to_date == end_date:
+            to_time = f"T{to_datetime.split('T')[1]}"
+        else:
+            to_time = f"T23:59:59"
 
 
-            # if data already exists
-            ask_squad = True
-            for entry in a:
-                if (entry['from_datetime'] == f"{tmp_from_date}{from_time}"
-                        and entry['to_datetime'] == f"{tmp_to_date}{to_time}"):
-                    kernel_pushes.append(entry['kernel pushes'])
-                    kernel_builts.append(entry['kernel builts'])
-                    num_tests.append(entry['tests'])
-                    for arch in entry['architectures']:
-                        architectures[arch] += entry['architectures'][arch]
+        # if data already exists
+        ask_squad = True
+        for entry in a:
+            if (entry['from_datetime'] == f"{tmp_from_date}{from_time}"
+                    and entry['to_datetime'] == f"{tmp_to_date}{to_time}"):
+                kernel_pushes.append(entry['kernel pushes'])
+                kernel_builts.append(entry['kernel builts'])
+                num_tests.append(entry['tests'])
+                for arch in entry['architectures']:
+                    architectures[arch] += entry['architectures'][arch]
 
-                    for dev, suites in entry['devices'].items():
-                        for suite in suites:
-                            devices[dev][suite]['total'] += entry['devices'][dev][suite]['total']
-                            devices[dev][suite]['pass'] += entry['devices'][dev][suite]['pass']
-                            devices[dev][suite]['skip'] += entry['devices'][dev][suite]['skip']
-                            devices[dev][suite]['fail'] += entry['devices'][dev][suite]['fail']
-                            devices[dev][suite]['xfail'] += entry['devices'][dev][suite]['xfail']
-                    ask_squad = False
-                    logger.debug(f"Found dates, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
-                    break
-
-            if ask_squad:
-                logger.debug(f"Fetching builds, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
-                builds = project.builds(created_at__lt=f"{tmp_to_date}{to_time}", created_at__gt=f"{tmp_from_date}{from_time}", count=ALL).values()
-                number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
-                devs = get_devices(environments, project.suites(count=ALL), builds)
-                total_tests = get_total_number_of_tests(builds)
-
-                d = {}
-                d['from_datetime'] = f"{tmp_from_date}{from_time}"
-                d['to_datetime'] = f"{tmp_to_date}{to_time}"
-                d['kernel pushes'] = len(builds)
-                d['kernel builts'] = number_of_kernel_builts
-                d['tests'] = total_tests
-                d['architectures'] = archs
-                d['devices'] = devs
-                a.append(d)
-
-                kernel_pushes.append(len(builds))
-                kernel_builts.append(number_of_kernel_builts)
-                num_tests.append(total_tests)
-                for arch in archs:
-                    architectures[arch] += archs[arch]
-                for dev, suites in devs.items():
+                for dev, suites in entry['devices'].items():
                     for suite in suites:
-                        devices[dev][suite]['total'] += devs[dev][suite]['total']
-                        devices[dev][suite]['pass'] += devs[dev][suite]['pass']
-                        devices[dev][suite]['skip'] += devs[dev][suite]['skip']
-                        devices[dev][suite]['fail'] += devs[dev][suite]['fail']
-                        devices[dev][suite]['xfail'] += devs[dev][suite]['xfail']
-
-            if year == to_year and month == to_month:
+                        devices[dev][suite]['total'] += entry['devices'][dev][suite]['total']
+                        devices[dev][suite]['pass'] += entry['devices'][dev][suite]['pass']
+                        devices[dev][suite]['skip'] += entry['devices'][dev][suite]['skip']
+                        devices[dev][suite]['fail'] += entry['devices'][dev][suite]['fail']
+                        devices[dev][suite]['xfail'] += entry['devices'][dev][suite]['xfail']
+                ask_squad = False
+                logger.debug(f"Found dates, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
                 break
+
+        if ask_squad:
+            logger.debug(f"Fetching builds, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
+            builds = project.builds(created_at__lt=f"{tmp_to_date}{to_time}", created_at__gt=f"{tmp_from_date}{from_time}", count=ALL).values()
+            number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
+            devs = get_devices(environments, project.suites(count=ALL), builds)
+            total_tests = get_total_number_of_tests(builds)
+
+            d = {}
+            d['from_datetime'] = f"{tmp_from_date}{from_time}"
+            d['to_datetime'] = f"{tmp_to_date}{to_time}"
+            d['kernel pushes'] = len(builds)
+            d['kernel builts'] = number_of_kernel_builts
+            d['tests'] = total_tests
+            d['architectures'] = archs
+            d['devices'] = devs
+            a.append(d)
+
+            kernel_pushes.append(len(builds))
+            kernel_builts.append(number_of_kernel_builts)
+            num_tests.append(total_tests)
+            for arch in archs:
+                architectures[arch] += archs[arch]
+            for dev, suites in devs.items():
+                for suite in suites:
+                    devices[dev][suite]['total'] += devs[dev][suite]['total']
+                    devices[dev][suite]['pass'] += devs[dev][suite]['pass']
+                    devices[dev][suite]['skip'] += devs[dev][suite]['skip']
+                    devices[dev][suite]['fail'] += devs[dev][suite]['fail']
+                    devices[dev][suite]['xfail'] += devs[dev][suite]['xfail']
+
 
 
     total_kernel_pushes = 0
