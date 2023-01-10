@@ -81,7 +81,96 @@ KNOWN_DEVICES = [
         "qemu-x86_64",
         "x15",
         "x86",
-        ]
+]
+
+KNOWN_SUITES = [
+    "kselftest-android",
+    "kselftest-arm64",
+    "kselftest-breakpoints",
+    "kselftest-capabilities",
+    "kselftest-cgroup",
+    "kselftest-clone3",
+    "kselftest-core",
+    "kselftest-cpu-hotplug",
+    "kselftest-cpufreq",
+    "kselftest-drivers-dma-buf",
+    "kselftest-efivarfs",
+    "kselftest-filesystems-binderfs",
+    "kselftest-filesystems",
+    "kselftest-firmware",
+    "kselftest-fpu",
+    "kselftest-futex",
+    "kselftest-gpio",
+    "kselftest-ipc",
+    "kselftest-ir",
+    "kselftest-kcmp",
+    "kselftest-lib",
+    "kselftest-membarrier",
+    "kselftest-memfd",
+    "kselftest-memory-hotplug",
+    "kselftest-mincore",
+    "kselftest-mount",
+    "kselftest-mqueue",
+    "kselftest-net-forwarding",
+    "kselftest-netfilter",
+    "kselftest-nsfs",
+    "kselftest-openat2",
+    "kselftest-pid_namespace",
+    "kselftest-pidfd",
+    "kselftest-proc",
+    "kselftest-pstore",
+    "kselftest-rseq",
+    "kselftest-rtc",
+    "kselftest-seccomp",
+    "kselftest-sigaltstack",
+    "kselftest-size",
+    "kselftest-splice",
+    "kselftest-static_keys",
+    "kselftest-sync",
+    "kselftest-sysctl",
+    "kselftest-tc-testing",
+    "kselftest-timens",
+    "kselftest-timers",
+    "kselftest-tmpfs",
+    "kselftest-tpm2",
+    "kselftest-user",
+    "kselftest-vm",
+    "kselftest-zram",
+    "kunit",
+    "kvm-unit-tests",
+    "libhugetlbfs",
+    "log-parser-boot",
+    "log-parser-test",
+    "ltp-cap_bounds",
+    "ltp-commands",
+    "ltp-containers",
+    "ltp-cpuhotplug",
+    "ltp-crypto",
+    "ltp-cve",
+    "ltp-dio",
+    "ltp-fcntl-locktests",
+    "ltp-filecaps",
+    "ltp-fs",
+    "ltp-fs_bind",
+    "ltp-fs_perms_simple",
+    "ltp-fsx",
+    "ltp-hugetlb",
+    "ltp-io",
+    "ltp-ipc",
+    "ltp-math",
+    "ltp-nptl",
+    "ltp-open-posix-tests",
+    "ltp-pty",
+    "ltp-sched",
+    "ltp-securebits",
+    "ltp-smoke",
+    "ltp-syscalls",
+    "ltp-tracing",
+    "network-basic-tests",
+    "perf",
+    "v4l2-compliance",
+    "vdso",
+]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Compare builds within SQUAD")
@@ -127,7 +216,7 @@ def parse_args():
 def get_number_of_kernel_builts(project, builds):
     suite = project.suite("build")
     envs = project.environments(count=ALL)
-    archs = set()
+    archs = defaultdict(int)
     total = 0
     for build in builds:
         logger.debug(f"Fetching build test from {build.version}")
@@ -138,21 +227,34 @@ def get_number_of_kernel_builts(project, builds):
             for known_arches in KNOWN_ARCHITECTURES:
                 env = envs[getid(test.environment)].slug
                 if known_arches in env:
-                    archs.add(env)
-            #archs.add(envs[getid(test.environment)].slug)
+                    archs[env] += 1
+                    break
 
-    return total, archs
+    return total, sorted_dict(archs)
 
 
-def get_devices(environments, archs):
-    devs = set(environments)
+def get_devices(environments, all_suites, builds):
+    builds_ids = [b.id for b in builds]
+    actual_devices = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
-    logger.debug(f"All environments {devs}")
-    actual_devices = set()
-    for dev in devs:
+    all_testruns = {e.id: [] for e in environments}
+    for build in builds:
+        for testrun in build.testruns().values():
+            all_testruns[getid(testrun.environment)].append(testrun)
+
+    for env in environments:
         for known_device in KNOWN_DEVICES:
-            if known_device in dev:
-                actual_devices.add(known_device)
+            if known_device in env.slug:
+                for testrun in all_testruns[env.id]:
+                    for s in testrun.statuses(suite__isnull=False).values():
+                        suite = all_suites[s.suite]
+                        if suite.slug in KNOWN_SUITES:
+                            tests_total = s.tests_pass + s.tests_skip + s.tests_fail + s.tests_xfail
+                            actual_devices[known_device][suite.slug]['total'] += tests_total
+                            actual_devices[known_device][suite.slug]['pass'] += s.tests_pass
+                            actual_devices[known_device][suite.slug]['skip'] += s.tests_skip
+                            actual_devices[known_device][suite.slug]['fail'] += s.tests_fail
+                            actual_devices[known_device][suite.slug]['xfail'] += s.tests_xfail
 
     return actual_devices
 
@@ -163,6 +265,10 @@ def get_total_number_of_tests(builds):
         total += build.status.tests_total
 
     return total
+
+
+def sorted_dict(d):
+    return dict(sorted(d.items(), key=lambda k: k[0]))
 
 
 def run():
@@ -181,7 +287,6 @@ def run():
     group = Squad().group(args.group)
     project = group.project(args.project)
     environments = project.environments(count=ALL).values()
-
 
     json_dir = 'stored_jsons'
     if not os.path.exists(json_dir):
@@ -204,8 +309,8 @@ def run():
     kernel_pushes = []
     kernel_builts = []
     num_tests = []
-    architectures = set()
-    devices = set()
+    architectures = defaultdict(int)
+    devices = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     filename = args.filename or f'{json_dir}/stats-{args.group}-{args.project}.json'
             #if os.path.isfile(filename):
     if os.path.isfile(filename):
@@ -241,8 +346,16 @@ def run():
                     kernel_pushes.append(entry['kernel pushes'])
                     kernel_builts.append(entry['kernel builts'])
                     num_tests.append(entry['tests'])
-                    architectures.update(set(entry['architectures']))
-                    devices.update(set(entry['devices']))
+                    for arch in entry['architectures']:
+                        architectures[arch] += entry['architectures'][arch]
+
+                    for dev, suites in entry['devices'].items():
+                        for suite in suites:
+                            devices[dev][suite]['total'] += entry['devices'][dev][suite]['total']
+                            devices[dev][suite]['pass'] += entry['devices'][dev][suite]['pass']
+                            devices[dev][suite]['skip'] += entry['devices'][dev][suite]['skip']
+                            devices[dev][suite]['fail'] += entry['devices'][dev][suite]['fail']
+                            devices[dev][suite]['xfail'] += entry['devices'][dev][suite]['xfail']
                     ask_squad = False
                     logger.debug(f"Found dates, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
                     break
@@ -251,24 +364,31 @@ def run():
                 logger.debug(f"Fetching builds, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
                 builds = project.builds(created_at__lt=f"{tmp_to_date}{to_time}", created_at__gt=f"{tmp_from_date}{from_time}", count=ALL).values()
                 number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
-                devs = get_devices([e.slug for e in environments], archs)
+                devs = get_devices(environments, project.suites(count=ALL), builds)
                 total_tests = get_total_number_of_tests(builds)
 
-                d = defaultdict(dict)
+                d = {}
                 d['from_datetime'] = f"{tmp_from_date}{from_time}"
                 d['to_datetime'] = f"{tmp_to_date}{to_time}"
                 d['kernel pushes'] = len(builds)
                 d['kernel builts'] = number_of_kernel_builts
                 d['tests'] = total_tests
-                d['architectures'] = list(sorted(archs))
-                d['devices'] = list(sorted(devs))
+                d['architectures'] = archs
+                d['devices'] = devs
                 a.append(d)
 
                 kernel_pushes.append(len(builds))
                 kernel_builts.append(number_of_kernel_builts)
                 num_tests.append(total_tests)
-                architectures.update(sorted(archs))
-                devices.update(sorted(devs))
+                for arch in archs:
+                    architectures[arch] += archs[arch]
+                for dev, suites in devs.items():
+                    for suite in suites:
+                        devices[dev][suite]['total'] += devs[dev][suite]['total']
+                        devices[dev][suite]['pass'] += devs[dev][suite]['pass']
+                        devices[dev][suite]['skip'] += devs[dev][suite]['skip']
+                        devices[dev][suite]['fail'] += devs[dev][suite]['fail']
+                        devices[dev][suite]['xfail'] += devs[dev][suite]['xfail']
 
             if year == to_year and month == to_month:
                 break
@@ -283,8 +403,28 @@ def run():
     total_tests = 0
     for tests in num_tests:
         total_tests += tests
-    archs_str = "\n           ".join(sorted(architectures))
-    devices_str = "\n           ".join(sorted(devices))
+
+    archs_str = ""
+    first = True
+    for arch in sorted_dict(architectures):
+        if first:
+            first = False
+        else:
+            archs_str += "\n           "
+        archs_str += f"{arch:<10} ({architectures[arch]} builds)"
+
+    devices_str = ""
+    first = True
+    for dev in sorted(devices):
+        if first:
+            first = False
+        else:
+            devices_str += "\n           "
+        devices_str += f"{dev:<20} ({len(devices[dev])} suites)"
+
+    with open(filename, "w") as outfile:
+        outfile.write(json.dumps(a, indent=4))
+
     report = f"""
         project:       {project.slug}
         from:          {from_datetime}
@@ -297,10 +437,6 @@ def run():
         devices:
            {devices_str}"""
     print(report)
-    with open(filename, "w") as outfile:
-        outfile.write(json.dumps(a, indent=4))
-    #print(json.dumps(a, indent=4))
-    sys.exit(1)
 
 
 if __name__ == "__main__":
