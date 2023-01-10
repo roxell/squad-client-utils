@@ -352,11 +352,11 @@ def run():
                         devices[dev][suite]['fail'] += entry['devices'][dev][suite]['fail']
                         devices[dev][suite]['xfail'] += entry['devices'][dev][suite]['xfail']
                 ask_squad = False
-                logger.debug(f"Found dates, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
+                print(f"Found dates in JSON file {filename}, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
                 break
 
         if ask_squad:
-            logger.debug(f"Fetching builds, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
+            print(f"Fetching builds from SQUAD, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
             builds = project.builds(created_at__lt=f"{tmp_to_date}{to_time}", created_at__gt=f"{tmp_from_date}{from_time}", count=ALL).values()
             number_of_kernel_builts, archs = get_number_of_kernel_builts(project, builds)
             devs = get_devices(environments, project.suites(count=ALL), builds)
