@@ -372,6 +372,10 @@ def run():
             d['devices'] = devs
             a.append(d)
 
+            with open(filename, "w") as outfile:
+                print(f"Write builds to JSON file {filename}, from_datetime: {tmp_from_date}{from_time}, to_datetime: {tmp_to_date}{to_time}")
+                outfile.write(json.dumps(a, indent=4))
+
             kernel_pushes.append(len(builds))
             kernel_builts.append(number_of_kernel_builts)
             num_tests.append(total_tests)
@@ -414,9 +418,6 @@ def run():
         else:
             devices_str += "\n           "
         devices_str += f"{dev:<20} ({len(devices[dev])} suites)"
-
-    with open(filename, "w") as outfile:
-        outfile.write(json.dumps(a, indent=4))
 
     report = f"""
         project:       {project.slug}
