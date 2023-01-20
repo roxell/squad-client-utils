@@ -61,6 +61,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--table",
+        action="store_true",
+        default=False,
+        help="Display diff or table output",
+    )
+
+    parser.add_argument(
         "--debug",
         action="store_true",
         default=False,
@@ -155,8 +162,6 @@ def run():
 
     with open(filename, 'w') as fp:
         fp.write(difference)
-    print(difference)
-    print(f"file created: {filename}")
 
     tests = dict()
     for line in basefile_lines:
@@ -194,6 +199,12 @@ def run():
 
     with open(table_filename, 'w') as fp:
         fp.write(report)
+
+    if args.table:
+        print(report)
+    else:
+        print(difference)
+        print(f"file created: {filename}")
 
 if __name__ == "__main__":
     sys.exit(run())
