@@ -1,0 +1,126 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# vim: set ts=4
+#
+# Copyright 2022-present Linaro Limited
+#
+# SPDX-License-Identifier: MIT
+
+
+import argparse
+import logging
+import os
+import re
+import sys
+import requests
+import yaml
+from pathlib import Path
+import squadutilslib
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def get_file(path):
+    print(f"Getting file from {path}")
+    if re.search(r'https?://', path):
+        request = requests.get(path, allow_redirects=True)
+        request.raise_for_status()
+        filename = path.split('/')[-1]
+        with open(filename, 'wb') as f:
+            f.write(request.content)
+        return filename
+    elif os.path.exists(path):
+        return path
+    else:
+        raise Exception(f"Path {path} not found")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="parse skipfile")
+
+    parser.add_argument(
+        "--skipfile",
+        required=True,
+        help="skipfile",
+    )
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Display debug messages",
+    )
+
+    return parser.parse_args()
+
+
+def check_linux_version(branch_name):
+    version = branch_name.split('-')[1]
+    major, minor, y = version.split('.')
+    if int(major) > 4 or (int(major) == 4 and int(minor) >= 14):
+        return True
+    return False
+
+def run():
+    args = parse_args()
+    if args.debug:
+        logger.setLevel(level=logging.DEBUG)
+
+    skipfile = get_file(args.skipfile)
+
+    with open(skipfile) as f:
+        reasons = yaml.load(f, Loader=yaml.FullLoader)
+    for reason in reasons['skiplist']:
+        if reason['boards'] == 'all' or 'all' in reason['boards']:
+            devices = ['qemu-armv7', 'qemu-arm64', 'qemu-i386', 'qemu-x86_64']
+            projects = []
+            if reason['branches'] == 'all' or 'all' in reason['branches']:
+                #projects = ['linux-stable-rc-linux-4.14.y', 'linux-stable-rc-linux-4.19.y', 'linux-stable-rc-linux-5.4.y', 'linux-stable-rc-linux-5.10.y', 'linux-stable-rc-linux-5.15.y', 'linux-stable-rc-linux-6.1.y', 'linux-stable-rc-linux-6.2.y', 'linux-mainline-master', 'linux-next-master']
+                projects = [
+                        'linux-next-master',
+                        'linux-mainline-master',
+                        'linux-stable-rc-linux-6.2.y',
+                        'linux-stable-rc-linux-6.1.y',
+                        'linux-stable-rc-linux-5.15.y',
+                        'linux-stable-rc-linux-5.10.y',
+                        'linux-stable-rc-linux-5.4.y',
+                        'linux-stable-rc-linux-4.19.y',
+                        'linux-stable-rc-linux-4.14.y',
+                        ]
+            else:
+                for branch in reason['branches']:
+                    if str(branch).startswith('linux-') or str(branch).startswith('master'):
+                        if check_linux_version(branch):
+                            projects += [f'linux-stable-rc-{branch}']
+            rerun = ''
+            for test in reason['tests']:
+                rerun += f' {test}'
+
+            for project in projects:
+                filename = f'single-run-{project}-ltp-syscalls-{rerun.replace(" ","_")}.sh'
+                multi_build_cmdline = ''
+                for device in devices:
+                    build = ''
+                    build_cmdline = ''
+                    build, build_cmdline = squadutilslib.get_single_run('lkft', project, 'latest', device, 'gcc-12-lkftconfig', 'ltp-syscalls', rerun, args.debug)
+                    print(build_cmdline)
+                    multi_build_cmdline += f'\n{build_cmdline}'
+                bisect_script = f"""#!/bin/bash
+{multi_build_cmdline}
+"""
+
+
+                Path(filename).write_text(bisect_script, encoding="utf-8")
+
+                print(f"{bisect_script}")
+                print(f"file created: {filename}")
+
+        else:
+            print(f"Skipping: {reason['boards']}")
+
+    return True
+
+
+if __name__ == "__main__":
+    sys.exit(run())
