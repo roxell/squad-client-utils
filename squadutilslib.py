@@ -14,9 +14,9 @@ from pathlib import Path
 
 import requests
 from requests import HTTPError
-from squad_client.core.models import Build, Squad, TestRun
+from squad_client.core.models import Squad, TestRun
 from squad_client.shortcuts import download_tests
-from squad_client.utils import first, getid
+from squad_client.utils import first
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
