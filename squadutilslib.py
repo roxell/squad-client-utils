@@ -203,11 +203,11 @@ def create_custom_reproducer(
         if ("tuxsuite test submit" in line and not local) or (
             "tuxrun --runtime" in line and local
         ):
-            line = re.sub("--tests \S+ ", "", line)
-            line = re.sub("--parameters SHARD_INDEX=\S+ ", "", line)
-            line = re.sub("--parameters SHARD_NUMBER=\S+ ", "", line)
-            line = re.sub("--parameters SKIPFILE=\S+ ", "", line)
-            line = re.sub(f"{suite}=\S+", "commands=5", line)
+            line = re.sub(r"--tests \S+ ", "", line)
+            line = re.sub(r"--parameters SHARD_INDEX=\S+ ", "", line)
+            line = re.sub(r"--parameters SHARD_NUMBER=\S+ ", "", line)
+            line = re.sub(r"--parameters SKIPFILE=\S+ ", "", line)
+            line = re.sub(f"{suite}=\\S+", "commands=5", line)
             if local:
                 build_cmdline = os.path.join(
                     build_cmdline + line.strip() + ' --save-outputs --log-file -"'

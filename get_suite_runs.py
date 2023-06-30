@@ -19,7 +19,7 @@ def main(args):
     SquadApi.configure(args.get("squadapi_url", None))
     number_of_builds = args.get("number", None)
     squad = Squad()
-    getid = lambda s: int(re.search("\d+", s).group())
+    getid = lambda s: int(re.search(r"\d+", s).group())
 
     # First we need to know which projects from the selected group
     # contain the specified suite.
