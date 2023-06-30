@@ -27,9 +27,9 @@ def _color(string, color):
     return colors[color] + string + end
 
 
-red = lambda s: _color(s, "red") if do_color else s
-yellow = lambda s: _color(s, "yellow") if do_color else s
-green = lambda s: _color(s, "green") if do_color else s
+red = lambda s: _color(s, "red") if do_color else s  # noqa
+yellow = lambda s: _color(s, "yellow") if do_color else s  # noqa
+green = lambda s: _color(s, "green") if do_color else s  # noqa
 
 
 def join(array, separator=","):
