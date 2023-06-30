@@ -19,7 +19,7 @@ def main(args):
     # Some configuration, might get parameterized later
     SquadApi.configure(args.get("squadapi_url", None))
     squad = Squad()
-    getid = lambda s: int(re.search(r"\d+", s).group())
+    getid = lambda s: int(re.search(r"\d+", s).group())  # noqa
     group = squad.group(args.get("group", None))
     project = group.project(args.get("project", None))
     bad_suite = project.suite(args.get("suite", None))
