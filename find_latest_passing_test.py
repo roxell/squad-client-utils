@@ -10,8 +10,7 @@ Given a bad build, find the latest good one
 
 import re
 import argparse
-from collections import defaultdict
-from squad_client.core.models import Squad, ALL, Build
+from squad_client.core.models import Squad, Build
 from squad_client.core.api import SquadApi
 from squad_client.utils import first
 
