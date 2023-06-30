@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 """
     Generates a list of tests followed by theirs "stableness" (YES or a %)
