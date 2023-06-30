@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 """
-
 Get a list of suites runs across projects
-
 """
 
 import re
