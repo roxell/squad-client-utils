@@ -50,7 +50,7 @@ def main(args):
     #         },
     #     }
     # }
-    table = {}
+    # table = {}
 
     if number_of_builds == "0":
         for project in projects:
