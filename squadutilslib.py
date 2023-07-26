@@ -56,6 +56,20 @@ def get_file(path, filename=None):
         raise Exception(f"Path {path} not found")
 
 
+def filter_projects(projects, pattern):
+    filtered = []
+    for p in projects:
+        if re.match(pattern, p.slug):
+            filtered.append(p)
+    return filtered
+
+
+def get_projects(group, pattern, modtime):
+    projects = Squad().projects(group__slug=group, datetime__gte=modtime, count=-1)
+    for p in filter_projects(projects.values(), pattern):
+        print(p.slug)
+
+
 def find_first_good_testrun(
     build_names,
     builds,
