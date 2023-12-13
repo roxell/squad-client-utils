@@ -299,6 +299,22 @@ optional arguments:
                         The suite name to grab a reproducer for.
 ```
 
+### `squad-download-attachments`: Get attachments for a given group, project and build.
+
+This script will download all attachments from SQUAD for a given group, project and build.
+They will be stored in a directory 'stored_attachments/<environment>'_'<testrun_id>'.
+
+```
+./squad-download-attachments --help
+usage: squad-download-attachments [-h] --group GROUP --project PROJECT --build BUILD_ID
+
+options:
+  -h, --help            show this help message and exit
+  --group GROUP         The name of the SQUAD group.
+  --project PROJECT     The name of the SQUAD project.
+  --build BUILD         SQUAD build id.
+```
+
 ### `read-skipfile-results`: Read results from
 
 

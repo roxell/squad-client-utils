@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+# vim: set ts=4
+#
+# Copyright 2023-present Linaro Limited
+#
+# SPDX-License-Identifier: MIT
+
+import argparse
+import json
+import logging
+from os import chdir
+from pathlib import Path
+import sys
+from squad_client.core.api import SquadApi
+from squad_client.core.models import ALL, Squad, TestRun, Environment
+from squad_client.utils import getid
+from squad_client.shortcuts import download_attachments
+import contextlib
+import lzma
+import tarfile
+import glob
+
+SquadApi.configure(cache=3600, url="https://qa-reports.linaro.org/")
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def arg_parser():
+    parser = argparse.ArgumentParser(description="download attachments in a testrun")
+
+    parser.add_argument(
+        "--group",
+        required=True,
+        help="squad group",
+    )
+
+    parser.add_argument(
+        "--project",
+        required=True,
+        help="squad project",
+    )
+
+    parser.add_argument(
+        "--build",
+        required=True,
+        help="squad build",
+    )
+
+    return parser
+
+
+def run():
+    args = arg_parser().parse_args()
+
+    group = Squad().group(args.group)
+    if group is None:
+        logger.error(f"Get group failed. Group not found: '{args.group}'.")
+        return -1
+
+    project = group.project(args.project)
+    if project is None:
+        logger.error(f"Get project failed. Project not found: '{args.project}'.")
+        return -1
+
+    build = project.build(args.build)
+    if build is None:
+        logger.error(f"Get build failed. Build not found: '{args.build}'.")
+        return -1
+
+    environments = project.environments(count=ALL, ordering="slug").values()
+    if not environments:
+        logger.error("Get environments failed. No environments found.")
+        return -1
+
+    suites = project.suites(count=ALL, ordering="slug").values()
+    if not suites:
+        logger.error("Get suites failed. No suites found.")
+        return -1
+
+    attachment_dir = Path('stored_attachments/' + args.build)
+    testruns = build.testruns()
+    for testrun in testruns:
+        if not TestRun(testrun).attachments:
+            continue
+        env_name = Environment(getid((TestRun(testrun).environment))).slug
+        dirname = Path(f"{attachment_dir}/{env_name}_{str(TestRun(testrun).id)}")
+        print(dirname)
+        # Only picking up 'qemu-' environments
+        # The check will be 'not "build" in dirname.name' when DUT in tuxbridge supports attachments.
+        if "qemu-" in dirname.name:
+            Path.mkdir(dirname, parents=True, exist_ok=True)
+            chdir(dirname)
+            download_attachments(TestRun(testrun))
+            chdir(sys.path[0])
+
+            # only working for mmtests-* for now.
+            file = glob.glob(f"{dirname}/mmtests-*.tar.xz")
+            # Extract the json file that contains the benchmark data.
+            with contextlib.closing(lzma.LZMAFile(file[0])) as xz:
+                with tarfile.open(fileobj=xz) as f:
+                    f.extractall(dirname)
+
+            file = glob.glob(f"{dirname}/output/*.json")
+            file_write = file[0].replace("/output", "")
+            # sort the json keys in the benchmark data file.
+            with open(file[0], mode="r") as read_file:
+                pjson = json.dumps(json.load(read_file), sort_keys=True, indent=4)
+                with open(file_write, mode="w") as write_file:
+                    write_file.write(pjson)
+
+
+if __name__ == "__main__":
+    sys.exit(run())
