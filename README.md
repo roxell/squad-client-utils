@@ -306,13 +306,14 @@ They will be stored in a directory 'stored_attachments/<environment>'_'<testrun_
 
 ```
 ./squad-download-attachments --help
-usage: squad-download-attachments [-h] --group GROUP --project PROJECT --build BUILD_ID
+usage: squad-download-attachments [-h] --group GROUP --project PROJECT --build BUILD_ID [--csv]
 
 options:
   -h, --help            show this help message and exit
   --group GROUP         The name of the SQUAD group.
   --project PROJECT     The name of the SQUAD project.
   --build BUILD         SQUAD build id.
+  --csv                 Create csv files.
 ```
 
 ### `read-skipfile-results`: Read results from

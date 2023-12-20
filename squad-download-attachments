@@ -6,10 +6,12 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import csv
 import json
 import logging
 from os import chdir
 from pathlib import Path
+import statistics
 import sys
 from squad_client.core.api import SquadApi
 from squad_client.core.models import ALL, Squad, TestRun, Environment
@@ -45,6 +47,14 @@ def arg_parser():
         "--build",
         required=True,
         help="squad build",
+    )
+
+    parser.add_argument(
+        "--csv",
+        default=False,
+        action="store_true",
+        required=False,
+        help="generate csv files",
     )
 
     return parser
@@ -108,6 +118,33 @@ def run():
                 pjson = json.dumps(json.load(read_file), sort_keys=True, indent=4)
                 with open(file_write, mode="w") as write_file:
                     write_file.write(pjson)
+
+                if not args.csv:
+                    continue
+
+                with open(file_write.replace(".json", ".csv"), mode="w") as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    dict_json = json.loads(pjson)
+                    if not dict_json["results"]:
+                        continue
+                    headers = ["median", "mean", "standard diviation", "name", "iteration", "name_iteration", "raw data..."]
+                    csv_writer.writerow(headers)
+                    for key in dict_json["results"]["_ResultData"]:
+                       iterations = 0
+                       for k in dict_json["results"]["_ResultData"][key]:
+                            csv_data = []
+                            float_arr = []
+                            for number in k["Values"]:
+                                float_arr.append(float(number))
+                            csv_data.append(statistics.median(float_arr))
+                            csv_data.append(statistics.mean(float_arr))
+                            csv_data.append(statistics.stdev(float_arr))
+                            csv_data.append(key)
+                            iterations = iterations + 1
+                            csv_data.append(f"iteration_{iterations}")
+                            csv_data.append(f"{key}_iterattion_{iterations}")
+                            csv_data.extend(k['Values'])
+                            csv_writer.writerow(csv_data)
 
 
 if __name__ == "__main__":
