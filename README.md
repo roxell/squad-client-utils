@@ -306,7 +306,7 @@ They will be stored in a directory 'stored_attachments/<environment>'_'<testrun_
 
 ```
 ./squad-download-attachments --help
-usage: squad-download-attachments [-h] --group GROUP --project PROJECT --build BUILD_ID [--csv]
+usage: squad-download-attachments [-h] [--group GROUP] [--project PROJECT] [--build BUILD_ID] [--csv] [--path TUXRUN_PATH]
 
 options:
   -h, --help            show this help message and exit
@@ -314,6 +314,7 @@ options:
   --project PROJECT     The name of the SQUAD project.
   --build BUILD         SQUAD build id.
   --csv                 Create csv files.
+  --path TUXRUN_PATH    Path to tuxrun artefects.
 ```
 
 ### `read-skipfile-results`: Read results from
