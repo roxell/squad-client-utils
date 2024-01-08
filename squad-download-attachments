@@ -92,7 +92,7 @@ def generate_files(dirname, fileprefix, create_csv):
             dict_json = json.loads(pjson)
             if not dict_json["results"]:
                 return False
-            headers = ["median", "mean", "standard diviation", "name", "iteration", "name_iteration", "raw data..."]
+            headers = ["median", "average", "standard deviation", "Percentage of std", "name", "iteration", "name_iteration", "raw data..."]
             csv_writer.writerow(headers)
             for key in dict_json["results"]["_ResultData"]:
                 iterations = 0
@@ -104,6 +104,9 @@ def generate_files(dirname, fileprefix, create_csv):
                     csv_data.append(statistics.median(float_arr))
                     csv_data.append(statistics.mean(float_arr))
                     csv_data.append(statistics.stdev(float_arr))
+                    if statistics.mean(float_arr) == 0:
+                        continue
+                    csv_data.append((statistics.stdev(float_arr) / statistics.mean(float_arr)) * 100)
                     csv_data.append(key)
                     iterations = iterations + 1
                     csv_data.append(f"iteration_{iterations}")
