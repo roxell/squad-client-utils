@@ -44,7 +44,7 @@ def arg_parser():
     parser.add_argument(
         "--job-status",
         required=False,
-        default="Submitted, Scheduled, Running",
+        default="Submitted,Scheduled,Running",
         help="Job status separated by comma ','. The job status can be, 'Submitted, Scheduled, Running",
     )
 
