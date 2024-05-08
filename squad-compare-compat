@@ -112,8 +112,8 @@ def run():
                             )
 
     table_filename = "table-compat.txt"
-    headings = "non-compat | compat | build_version/device/build_name/testsuite/test\n"
-    headings = f"{headings}--------------------------------------------------------------------\n"
+    headings = "64-bit native | compat | 32-bit native | build_version/device/build_name/testsuite/test\n"
+    headings = f"{headings}----------------------------------------------------------------------------\n"
     with open(table_filename, "w") as fp:
         fp.write(headings)
         for group_name, project_name, build_name in args.gpb:
@@ -140,17 +140,35 @@ def run():
             file_lines = file_open.readlines()
 
             compatlist = {}
+            native32list = {}
             for line in file_lines:
                 test_name, test_result = line.split()
-                build_name = test_name.split("/")[1]
+                device_name, build_name = test_name.split("/")[0:2]
+                test_name = "/".join(test_name.split("/")[1:])
+
                 if build_name.endswith("-compat"):
                     compatlist[test_name.replace("-compat", "")] = test_result
+                elif device_name in ["qemu-armv7", "x15", "qemu-i386", "i386"]:
+                    native32list[test_name] = test_result
+
             for line in file_lines:
                 test_name, test_result = line.split()
-                if test_name in compatlist.keys():
-                    if test_result != compatlist[test_name]:
+                device_name, build_name = test_name.split("/")[0:2]
+                test_name = "/".join(test_name.split("/")[1:])
+                if test_name in compatlist.keys() and device_name not in [
+                    "qemu-armv7",
+                    "x15",
+                    "qemu-i386",
+                    "i386",
+                ]:
+                    if test_name not in native32list.keys():
+                        native32list[test_name] = None
+                    if (
+                        test_result != compatlist[test_name]
+                        or test_result != native32list[test_name]
+                    ):
                         fp.write(
-                            f"{test_result} | {compatlist[test_name]} : {build.version}/{test_name}\n"
+                            f"{test_result} | {compatlist[test_name]} | {native32list[test_name]} : {build.version}/{device_name}/{test_name}\n"
                         )
 
         logger.debug(f"group: {group}, project: {project}, build: {build}")
