@@ -63,7 +63,7 @@ def download_tests(project, build, environments, suites, output_filename):
         build,
         environments,
         suites,
-        "{test.environment.slug}/{test.test_run.metadata.build_name}/{test.name} {test.status}",
+        "{test.environment.slug}/{test.test_run.metadata.build_name}/{test.name} {test.status} {test.test_run.log_file}",
         output_filename,
     )
 
@@ -142,7 +142,7 @@ def run():
             compatlist = {}
             native32list = {}
             for line in file_lines:
-                test_name, test_result = line.split()
+                test_name, test_result, logfile = line.split()
                 device_name, build_name = test_name.split("/")[0:2]
                 test_name = "/".join(test_name.split("/")[1:])
 
@@ -152,7 +152,7 @@ def run():
                     native32list[test_name] = test_result
 
             for line in file_lines:
-                test_name, test_result = line.split()
+                test_name, test_result, logfile = line.split()
                 device_name, build_name = test_name.split("/")[0:2]
                 test_name = "/".join(test_name.split("/")[1:])
                 if test_name in compatlist.keys() and device_name not in [
